@@ -46,13 +46,15 @@ void tcp_echo_handler(egn_t *egn,egn_event_t *ev){
                     conn->msg_count++;
                     log_info("%d recv msg: %s",fd,buffer);
                     write(fd,buffer,n);
+                    if(conn->msg_count>=conn->run_time){
+                        fin=true;
+                    }
                 }
             }
             if(fin){
                 log_info("close %d",fd);
                 egn_remove_io(egn,ev,0);
                 close(fd);
-                conn->parent.fd=-1;
                 egn_del_object(egn,conn);
             }
         }
@@ -60,7 +62,6 @@ void tcp_echo_handler(egn_t *egn,egn_event_t *ev){
         log_info("io shut %d",fd);
         egn_remove_io(egn,ev,0);
         close(fd);
-        conn->parent.fd=-1;
         egn_del_object(egn,conn);
     }
 }
@@ -80,18 +81,21 @@ inline tcp_echo_conn_t *create_tcp_conn(egn_t *egn,int fd,egn_event_handler hand
     conn->parent.fd=fd;
     ev->data=conn;
     ev->handler=handler;
+    log_info("new ev %p",ev);
     return conn;
 }
 tcp_echo_conn_t* create_tcp_peer_conn(egn_t *egn,int fd,egn_event_handler handler){
     tcp_echo_conn_t *conn=create_tcp_conn(egn,fd,handler);
     egn_event_t *ev=nullptr;
+    int points=0;
     if(!conn){
         close(fd);
         return conn;
     }
+    conn->run_time=3;
     ev=conn->parent.ev;
     egn_nonblocking(fd);
-    int points=EGNPOINTIN|EGNPOINTET;
+    points=EGNPOINTIN|EGNPOINTET;
     egn_add_io(egn,ev,points);
     return conn;
 }
@@ -105,13 +109,12 @@ void tcp_listen_handler(egn_t *egn,egn_event_t *ev){
     char ip_str[INET6_ADDRSTRLEN];
     uint16_t port=0;
     memset(ip_str,0,INET6_ADDRSTRLEN);
-    log_info("listen fd %d",listen_fd);
     if(!ev->shut){
         if(listen_conn->parent.repoints&EGNPOINTIN){
             while((s=accept(listen_fd,(sockaddr*)&sock_saddr,&sock_addr_sz))>=0){
                 sockaddr_string(&sock_saddr,&port,ip_str,INET6_ADDRSTRLEN);
-                create_tcp_peer_conn(egn,s,tcp_echo_handler);
                 log_info("accept from %s:%d",ip_str,port);
+                create_tcp_peer_conn(egn,s,tcp_echo_handler); 
                 memset(ip_str,0,INET6_ADDRSTRLEN);
             }
         }
@@ -119,7 +122,6 @@ void tcp_listen_handler(egn_t *egn,egn_event_t *ev){
         log_info("io shut %d",listen_fd);
         egn_remove_io(egn,ev,0);
         close(listen_fd);
-        listen_conn->parent.fd=-1;
         egn_del_object(egn,listen_conn);
     }
 }
@@ -127,6 +129,7 @@ tcp_echo_conn_t* create_tcp_listener(egn_t *egn,int family,
             const char*ip,uint16_t port,egn_event_handler handler){
     tcp_echo_conn_t *conn=nullptr;
     egn_event_t *ev=nullptr;
+    int points=0;
     int fd=bind_tcp(family,ip,port,kBacklog);
     if(fd<0){
         log_error("fd is negative");
@@ -141,7 +144,7 @@ tcp_echo_conn_t* create_tcp_listener(egn_t *egn,int family,
     }
     egn_nonblocking(fd);
     ev=conn->parent.ev;
-    int points=EGNPOINTIN|EGNPOINTET;
+    points=EGNPOINTIN|EGNPOINTET;
     egn_add_io(egn,ev,points);
     return conn;
 }
@@ -154,16 +157,17 @@ int main(){
     signal(SIGINT, signal_exit_handler);
     signal(SIGHUP, signal_exit_handler);//ctrl+c
     signal(SIGTSTP, signal_exit_handler);//ctrl+z
+    const char *ip="0.0.0.0";
+    uint16_t port=3345;
     egn_t *egn=egn_new_engine();
     if(nullptr==egn){
         return -1;
     }
     usleep(1000);//sleep 1ms;
-    const char *ip="0.0.0.0";
-    uint16_t port=3345;
     create_tcp_listener(egn,AF_INET,ip,port,tcp_listen_handler);
     while(g_running){
         egn_loop_once(egn,0);
     }
     egn_del_engine(egn);
+    return 0;
 }

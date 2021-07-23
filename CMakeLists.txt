@@ -29,3 +29,7 @@ target_link_libraries(${EXECUTABLE_NAME} libengine)
 set(EXECUTABLE_NAME "tcp_echo_c")
 add_executable(${EXECUTABLE_NAME} ${CMAKE_SOURCE_DIR}/test/tcp_echo_client.c)
 
+set(EXECUTABLE_NAME "tcp_asyn_c")
+add_executable(${EXECUTABLE_NAME} ${CMAKE_SOURCE_DIR}/test/tcp_asyn_client.cc)
+target_link_libraries(${EXECUTABLE_NAME} libengine)
+

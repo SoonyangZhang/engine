@@ -74,12 +74,14 @@ int egn_add_timer(egn_t *egn,egn_event_t *ev);
 int egn_remove_timer(egn_t *egn,egn_event_t *ev);
 
 int egn_add_io(egn_t *egn,egn_event_t *ev,int points);
+int egn_mod_io(egn_t *egn,egn_event_t *ev,int points);
 int egn_remove_io(egn_t *egn,egn_event_t *ev,int points);
 
 void egn_loop(egn_t *egn);
 void egn_loop_once(egn_t *egn,int timeout_ms);
 
 void egn_process_timer_test(egn_t *egn,uint32_t now);
+void log_poller_events(int repoints);
 #ifdef __cplusplus
 }
 #endif

@@ -95,6 +95,9 @@ egn_t*  egn_new_engine(){
 void egn_del_engine(egn_t *egn){
     egn_event_t *ev=NULL;
     egn_timer_obj_t *obj=NULL;
+    int io_many=0;
+    int timer_many=0;
+    int obj_many=0;
     do{
         ev=TAILQ_FIRST(&egn->event_list);
         if(ev){
@@ -112,10 +115,15 @@ void egn_del_engine(egn_t *egn){
         ev->handler(egn,ev);
     }
     egn_epoll_done(egn);
-    CHECK(0==egn->io_many);
-    CHECK(0==egn->timer_many);
-    //CHECK(0==egn->obj_many);
+    io_many=egn->io_many;
+    timer_many=egn->timer_many;
+    obj_many=egn->obj_many;
     egn_free(egn);
+    CHECK(0==io_many);
+    CHECK(0==timer_many);
+    if(0!=obj_many){
+        log_error("obj many %d",obj_many);
+    }
 }
 void *egn_new_object(egn_t *egn,int sz){
     void *obj=egn_malloc(sz);
@@ -272,16 +280,18 @@ void egn_process_timer_test(egn_t *egn,uint32_t now){
 }
 int egn_add_io(egn_t *egn,egn_event_t *ev,int points){
     int ret=EGN_ERR;
-    ret=egn_add_io_tailq(egn,ev);
+    egn_add_io_tailq(egn,ev);
+    ret=egn_epoll_add_event(egn,ev,points,0);
     if(EGN_OK!=ret){
-        log_error("add io failed %p",ev);
+        egn_remove_io_tailq(egn,ev);
     }
-    if(EGN_OK==ret){
+    return ret;
+}
+int egn_mod_io(egn_t *egn,egn_event_t *ev,int points){
+    int ret=EGN_ERR;
+    if(false==egn_memeqzero(&ev->tailq_entry,sizeof(ev->tailq_entry))){
         ret=egn_epoll_add_event(egn,ev,points,0);
-        if(EGN_OK!=ret){
-            egn_remove_io_tailq(egn,ev);
-        }
-    }
+    }//else, call egn_add_io first
     return ret;
 }
 int egn_remove_io(egn_t *egn,egn_event_t *ev,int points){
@@ -325,4 +335,7 @@ void egn_loop_once(egn_t *egn,int timeout_ms){
             wait_flag=false;
         }
     }
+}
+void log_poller_events(int repoints){
+    log_epoll_events(repoints);
 }

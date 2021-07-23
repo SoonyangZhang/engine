@@ -161,3 +161,7 @@ void egn_epoll_process_event(egn_t *egn,int timeout){
         conn->repoints=0;
     }
 }
+void log_epoll_events(int reevents){
+    update_epoll_event_buf(reevents);
+    log_info("%s",epoll_event_buf);
+}
