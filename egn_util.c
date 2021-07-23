@@ -75,3 +75,54 @@ void* egn_realloc(void *mem_address, unsigned int newsize){
 void egn_free(void *alloc){
     free(alloc);
 }
+
+// Convert |x| from host order (little endian) to network order (big endian).
+#if defined(__clang__) || \
+    (defined(__GNUC__) && \
+     ((__GNUC__ == 4 && __GNUC_MINOR__ >= 8) || __GNUC__ >= 5))
+INLINE uint16_t byte_swap16(uint16_t val){
+    return __builtin_bswap16(val);
+}
+INLINE uint32_t byte_swap32(uint32_t val){
+    return __builtin_bswap32(val);
+}
+INLINE uint64_t byte_swap64(uint64_t val){
+    return __builtin_bswap64(val);
+}
+#else
+//https://sites.google.com/site/rajboston1101/my-page/c---bits-manipulation/swapping
+//https://stackoverflow.com/questions/105252/how-do-i-convert-between-big-endian-and-little-endian-values-in-c
+INLINE uint16_t byte_swap16(uint16_t val){
+     return (val << 8) | (val >> 8 );
+}
+INLINE uint32_t byte_swap32(uint32_t val){
+    val = ((val << 8) & 0xFF00FF00 ) | ((val >> 8) & 0xFF00FF ); 
+    return (val << 16) | (val >> 16);
+}
+INLINE uint64_t byte_swap64(uint64_t val){
+    val = ((val << 8) & 0xFF00FF00FF00FF00ULL ) | ((val >> 8) & 0x00FF00FF00FF00FFULL );
+    val = ((val << 16) & 0xFFFF0000FFFF0000ULL ) | ((val >> 16) & 0x0000FFFF0000FFFFULL );
+    return (val << 32) | (val >> 32);
+}
+#endif
+
+
+uint16_t egn_hton16(uint16_t x){
+    return byte_swap16(x);
+}
+uint32_t egn_hton32(uint32_t x){
+    return byte_swap32(x);
+}
+uint64_t egn_hton64(uint64_t x){
+    return byte_swap64(x);
+}
+
+uint16_t egn_ntoh16(uint16_t x){
+    return egn_hton16(x);
+}
+uint32_t egn_ntoh32(uint32_t x){
+    return egn_hton32(x);
+}
+uint64_t egn_ntoh64(uint64_t x){
+    return egn_hton64(x);
+}

@@ -33,3 +33,11 @@ set(EXECUTABLE_NAME "tcp_asyn_c")
 add_executable(${EXECUTABLE_NAME} ${CMAKE_SOURCE_DIR}/test/tcp_asyn_client.cc)
 target_link_libraries(${EXECUTABLE_NAME} libengine)
 
+set(EXECUTABLE_NAME "mock_file_s")
+add_executable(${EXECUTABLE_NAME} ${CMAKE_SOURCE_DIR}/test/mock_file_server.cc)
+target_link_libraries(${EXECUTABLE_NAME} libengine)
+
+set(EXECUTABLE_NAME "mock_file_c")
+add_executable(${EXECUTABLE_NAME} ${CMAKE_SOURCE_DIR}/test/mock_file_client.cc)
+target_link_libraries(${EXECUTABLE_NAME} libengine)
+
