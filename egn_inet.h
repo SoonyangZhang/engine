@@ -13,10 +13,12 @@ const char *inet_ntop(int af, const void *src, char* dst, socklen_t size);
 int inet_pton(int af, const char* src, void *dst);
 #else
 #include <netinet/in.h>
-#include<arpa/inet.h>
+#include <arpa/inet.h>
 #include <fcntl.h>
 #define egn_nonblocking(s)  fcntl(s, F_SETFL, fcntl(s, F_GETFL) | O_NONBLOCK)
 int bind_tcp(int familiy,const char *ip,uint16_t port,int backlog);
+int bind_udp(int familiy,const char *ip,uint16_t port,bool tp);
+int bind_udp_addr(const struct sockaddr* addr, socklen_t addr_len,bool tp);
 #endif
 int sockaddr_init(struct sockaddr_storage* addr,int familiy,const char*ip,uint16_t port);
 int sockaddr_string(const struct sockaddr_storage* addr,uint16_t *port,char *dst,socklen_t dst_sz);

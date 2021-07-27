@@ -274,6 +274,7 @@ int inet_pton(int af, const char* src, void* dst) {
   return -1;
 }
 #else
+#include <unistd.h>
 #include <sys/socket.h>
 #include <errno.h>
 int bind_tcp(int familiy,const char *ip,uint16_t port,int backlog){
@@ -305,6 +306,51 @@ int bind_tcp(int familiy,const char *ip,uint16_t port,int backlog){
         return fd;
     }
     if(-1==listen(fd,backlog)){
+        log_warn("%s",strerror(errno));
+        close(fd);
+        fd=-1;
+        return fd;
+    }
+    return fd;
+}
+int bind_udp(int familiy,const char *ip,uint16_t port,bool tp){
+    int fd=-1;
+    struct sockaddr_storage servaddr;
+    if(sockaddr_init(&servaddr,familiy,ip,port)!=0){
+        return fd;
+    }
+    socklen_t addr_len= sizeof(struct sockaddr_storage);
+    fd=bind_udp_addr((struct sockaddr*)&servaddr,addr_len,tp);
+    return fd;
+}
+int bind_udp_addr(const struct sockaddr* addr, socklen_t addr_len,bool tp){
+    int fd=-1;
+    int yes=1;
+    fd=socket(AF_INET, SOCK_DGRAM, 0);
+    if(fd<0){
+        return fd;
+    }
+    if(setsockopt(fd,SOL_SOCKET,SO_REUSEADDR,&yes,sizeof(int))!=0){
+        close(fd);
+        fd=-1;
+        return fd;
+    }
+    if(setsockopt(fd,SOL_SOCKET, SO_REUSEPORT,(const void *)&yes ,sizeof(int))!=0){
+        close(fd);
+        fd=-1;
+        return fd;
+    }
+    if(tp&&setsockopt(fd, SOL_IP, IP_TRANSPARENT, &yes, sizeof(int))!=0){
+        close(fd);
+        fd=-1;
+        return fd;
+    }
+    if(tp&&setsockopt(fd, IPPROTO_IP,IP_RECVORIGDSTADDR, &yes, sizeof(int))!=0){
+        close(fd);
+        fd=-1;
+        return fd;
+    }
+    if(bind(fd,addr,addr_len)<0){
         log_warn("%s",strerror(errno));
         close(fd);
         fd=-1;
